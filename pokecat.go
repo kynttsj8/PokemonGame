@@ -266,7 +266,19 @@ func main() {
 				panic(event.Err)
 			}
 			// Send the key character to the input channel
-			inputCh <- string(event.Key)
+			switch event.Key {
+			case keyboard.KeyArrowUp:
+				inputCh <- "up"
+			case keyboard.KeyArrowDown:
+				inputCh <- "down"
+			case keyboard.KeyArrowLeft:
+				inputCh <- "left"
+			case keyboard.KeyArrowRight:
+				inputCh <- "right"
+			case keyboard.KeyEsc:
+				endCh <- "end"
+				return
+			}
 		}
 	}()
 
@@ -275,27 +287,26 @@ func main() {
 
 	gameLoop:
 		for {
-			input := <-inputCh
-			switch input {
-			case string(keyboard.KeyArrowUp):
-				world.movePlayer(name, -1, 0)
-				world.display()
-			case string(keyboard.KeyArrowDown):
-				world.movePlayer(name, 1, 0)
-				world.display()
-			case string(keyboard.KeyArrowLeft):
-				world.movePlayer(name, 0, -1)
-				world.display()
-			case string(keyboard.KeyArrowRight):
-				world.movePlayer(name, 0, 1)
-				world.display()
-			case string(keyboard.KeyEsc):
-				endCh <- "end"
+			select {
+			case input := <-inputCh:
+				switch input {
+				case "up":
+					world.movePlayer(name, -1, 0)
+					world.display()
+				case "down":
+					world.movePlayer(name, 1, 0)
+					world.display()
+				case "left":
+					world.movePlayer(name, 0, -1)
+					world.display()
+				case "right":
+					world.movePlayer(name, 0, 1)
+					world.display()
+				}
+			case <-endCh:
 				break gameLoop
 			}
-
 		}
-
 	}()
 
 	// Spawn Pokémon randomly every few seconds
@@ -319,6 +330,6 @@ func main() {
 	}()
 
 	// Wait for the game to end
-	end := <-endCh
-	fmt.Printf("Game %s\n", end)
+	<-endCh
+	fmt.Printf("Game ended\n")
 }
