@@ -1,0 +1,8 @@
+{
+    "worldSize": 25,
+    "spawTime": "5s",
+    "despawnTime": "10s",
+    "pokemonPerSpawn": 10,
+    "playerLink": "./server/Assets/players.json",
+    "pokedexFile": "./server/Assets/pokedex.json"
+}
