@@ -186,23 +186,44 @@ func publishMsgAll(msg string) error {
 	}
 	return nil
 }
-
 func onMessage(conn net.Conn, pokedex []Pokemon) {
 	fmt.Println("new client")
 	reader := bufio.NewReader(conn)
-	playerName, err := reader.ReadString('\n')
-	playerName = strings.TrimSpace(playerName)
-	if err != nil {
-		return
+	var playerName string
+	for {
+		playerNameInput, err := reader.ReadString('\n')
+		if err != nil {
+			conn.Close()
+			return
+		}
+		playerName = strings.TrimSpace(playerNameInput)
+
+		// Check if the player with the same name already exists in participants
+		mu.Lock()
+		found := false
+		for _, p := range participants {
+			if p.player.Name == playerName {
+				// Player with the same name already exists
+				publishMsgOne(conn, "Player with the same name is already connected. Please choose a different name:\n#")
+				found = true
+				break
+			}
+		}
+		mu.Unlock()
+
+		if !found {
+			break
+		}
 	}
-	fmt.Println(playerName)
+
+	// If player doesn't exist in participants, proceed with adding or creating the player
 	player, found := findPlayer(playerName)
 	if !found {
 		publishMsgOne(conn, "Player does not exist. Created a new player.\n#")
 		player = createPlayer(pokedex, playerName)
 	}
-	// request the player to choose a Pokemon
-	// make all the Pokemon deployable
+
+	// Make all the Pokemon deployable
 	for i := range player.PokemonList {
 		player.PokemonList[i].Deployable = true
 	}
@@ -220,9 +241,45 @@ func onMessage(conn net.Conn, pokedex []Pokemon) {
 		conn:       conn,
 	})
 	mu.Unlock()
-	fmt.Println(len(participants))
 
+	fmt.Println(len(participants))
 }
+// func onMessage(conn net.Conn, pokedex []Pokemon) {
+// 	fmt.Println("new client")
+// 	reader := bufio.NewReader(conn)
+// 	playerName, err := reader.ReadString('\n')
+// 	playerName = strings.TrimSpace(playerName)
+// 	if err != nil {
+// 		return
+// 	}
+// 	fmt.Println(playerName)
+// 	player, found := findPlayer(playerName)
+// 	if !found {
+// 		publishMsgOne(conn, "Player does not exist. Created a new player.\n#")
+// 		player = createPlayer(pokedex, playerName)
+// 	}
+// 	// request the player to choose a Pokemon
+// 	// make all the Pokemon deployable
+// 	for i := range player.PokemonList {
+// 		player.PokemonList[i].Deployable = true
+// 	}
+// 	msg := listPokemon(player.PokemonList)
+
+// 	chosenPokemon, _ := readPokemonFromClient(conn, msg[:len(msg)-1]+"Choose a pokemon: #", player.PokemonList)
+
+// 	// Add the player to the list of participants
+// 	mu.Lock()
+// 	participants = append(participants, Participant{
+// 		player:     player,
+// 		turn:       3,
+// 		isWin:      false,
+// 		curPokemon: chosenPokemon,
+// 		conn:       conn,
+// 	})
+// 	mu.Unlock()
+// 	fmt.Println(len(participants))
+
+// }
 
 func createPlayer(pokedex []Pokemon, playerName string) Player {
 	// Create the player
